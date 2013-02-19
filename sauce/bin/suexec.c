@@ -83,7 +83,6 @@ int main(int argc, char *argv[]) {
 	uid_t uid;
 	gid_t gid;
 
-/*
 	struct stat fstat;
 	if (stat(argv[0], &fstat) != 0) {
 		fprintf(stderr, "stat(%s) failed: %s\n", argv[0], strerror(errno));
@@ -93,7 +92,6 @@ int main(int argc, char *argv[]) {
 		fprintf(stderr, "%s is not setuid\n", argv[0]);
 		exit(EXIT_FAILURE);
 	}
-*/
 
 	if (argc < 4) {
 		fprintf(stderr, "too few arguments\n");
