@@ -46,9 +46,11 @@ testresult = namedtuple('testresult', ['result', 'partial', 'test', 'runtime', '
 # Timeout value for join between sending SIGTERM and SIGKILL to process
 THREADKILLTIMEOUT = 0.5
 
+
 class CompileFirstException(Exception): pass
 
-class TimeoutProcess():
+
+class TimeoutProcess(object):
     '''Runs an external command until timeout is reached
     
     Assumes that Popen uses PIPE for stdin, stdout and stderr
@@ -96,6 +98,20 @@ class TimeoutProcess():
             self.p.returncode = -1
         
         return process(self.p.returncode, self.stdout, self.stderr)
+
+
+SUEXEC = '/home/moschlar/workspace/SAUCE/sauce/bin/suexec'
+USER = '1001'
+GROUP = '1001'
+
+
+class SuexecTimeoutProcess(TimeoutProcess):
+
+    def __call__(self, argv, *args, **kwargs):
+        suexec_argv = [SUEXEC, USER, GROUP]
+        suexec_argv.extend(argv)
+        return super(SuexecTimeoutProcess, self).__call__(suexec_argv, *args, **kwargs)
+
 
 def compile(compiler, dir, srcfile, binfile):
     '''Compiles a source file
@@ -148,6 +164,7 @@ def compile(compiler, dir, srcfile, binfile):
     log.debug('Process stderr: %s' % stderrdata.strip())
     
     return process(returncode, stdoutdata, stderrdata)
+
 
 def execute(interpreter, timeout, dir, basename, binfile, stdin=None, argv=''):
     '''Execute or interpret a binfile
