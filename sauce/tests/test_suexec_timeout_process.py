@@ -40,12 +40,12 @@ class TestSuexecTimeoutProcess(TestCase):
     def test_id(self):
         '''Test the id program'''
         
-        argv = ['/bin/id']
+        argv = ['/usr/bin/id']
         timeout = 1
         t = self.p(argv, timeout)
-        self.assertEqual(t.returncode, 0)
-        self.assertIn('1001', t.stderr)
-        self.assertNotIn('1000', t.stderr)
+        self.assertEqual(t.returncode, 0, t.stderr)
+        self.assertIn('1001', t.stdout)
+        self.assertNotIn('1000', t.stdout)
 
 
     def test_ok(self):

@@ -101,16 +101,16 @@ class TimeoutProcess(object):
 
 
 SUEXEC = '/home/moschlar/workspace/SAUCE/sauce/bin/suexec'
-USER = '1001'
-GROUP = '1001'
 
 
 class SuexecTimeoutProcess(TimeoutProcess):
 
-    def __call__(self, argv, *args, **kwargs):
-        suexec_argv = [SUEXEC, USER, GROUP]
+    def __call__(self, argv, timeout, stdin=None, *args, **kwargs):
+        suexec_argv = [SUEXEC, "%d" % timeout]
         suexec_argv.extend(argv)
-        return super(SuexecTimeoutProcess, self).__call__(suexec_argv, *args, **kwargs)
+        self.p = Popen(suexec_argv, stdin=PIPE, stdout=PIPE, stderr=PIPE, **kwargs)
+        (self.stdout, self.stderr) = self.p.communicate(self.stdin)
+        return process(self.p.returncode, self.stdout, self.stderr)
 
 
 def compile(compiler, dir, srcfile, binfile):
