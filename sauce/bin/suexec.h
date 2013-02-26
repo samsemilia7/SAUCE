@@ -1,33 +1,27 @@
-/*
- General purpose port of the Apache HTTPD suexec program
+#ifndef SUEXEC_H
+#define SUEXEC_H
 
- See suexec.c for more details.
- */
+// All user and group definitions may be per name or per numerical id
 
-/*
- #
- ## SAUCE - System for AUtomated Code Evaluation
- ## Copyright (C) 2013 Moritz Schlarb
- ##
- ## This program is free software: you can redistribute it and/or modify
- ## it under the terms of the GNU Affero General Public License as published by
- ## the Free Software Foundation, either version 3 of the License, or
- ## any later version.
- ##
- ## This program is distributed in the hope that it will be useful,
- ## but WITHOUT ANY WARRANTY; without even the implied warranty of
- ## MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- ## GNU Affero General Public License for more details.
- ##
- ## You should have received a copy of the GNU Affero General Public License
- ## along with this program.  If not, see <http://www.gnu.org/licenses/>.
- #
- */
+// Set this to the user that is allowed to run suexec
+// (e.g. the web application user)
+#define SOURCE_USER "moschlar"
 
-#ifndef SUEXEC_H_
-#define SUEXEC_H_
+// Set this to the user and group which suexec will drop
+// privileges to.
+// To ensure that the temporary directory created by the web application
+// is read- and writable for the target user, you must set permissions and
+// ownership accordingly within the web application
+#define TARGET_USER "tine"
+#define TARGET_GROUP "tine"
 
-#define UID_MIN 100
-#define GID_MIN 100
+// Set this to the amount of time in microseconds
+// to wait between the various signals
+#define TIMEOUT 100000
 
-#endif /* SUEXEC_H_ */
+// Set the number of signals in the list below
+#define SIGNAL_LIST_LENGTH 3
+// Set the signals to send in ascending order (no quotes!)
+#define SIGNAL_LIST SIGALRM, SIGTERM, SIGKILL
+
+#endif /* SUEXEC_H */
