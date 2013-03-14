@@ -22,6 +22,8 @@
 #
 
 import os, logging
+import tempfile as _tempfile
+import errno as _errno
 from tempfile import mkdtemp
 from subprocess import Popen, PIPE
 from threading import Thread
@@ -36,6 +38,9 @@ split = lambda a: [b.decode('utf-8') for b in _split(a.encode('utf-8'))]
 
 #from sauce.lib.runner.compiler import compile
 #from sauce.lib.runner.interpreter import interpret
+
+# F*ck yeah...
+os.umask(0002)
 
 log = logging.getLogger(__name__)
 
@@ -124,7 +129,7 @@ def compile(compiler, dir, srcfile, binfile):
     @return: (returncode, stdoutdata, stderrdata)
     '''
     
-    tp = TimeoutProcess()
+    tp = SuexecTimeoutProcess()
     
     # Get compiler information
     log.debug('Compiler: %s' % compiler)
@@ -179,7 +184,7 @@ def execute(interpreter, timeout, dir, basename, binfile, stdin=None, argv=''):
     @return: (returncode, stdoutdata, stderrdata)
     '''
     
-    tp = TimeoutProcess()
+    tp = SuexecTimeoutProcess()
     
     if interpreter:
         # Get interpreter information
@@ -230,6 +235,54 @@ def execute(interpreter, timeout, dir, basename, binfile, stdin=None, argv=''):
     
     return process(returncode, stdoutdata, stderrdata)
 
+
+class TempDir(object):
+
+    def __init__(self, suffix="", prefix=None, dir=None, mode=0700):
+        '''From tempfile.mkdtemp()
+
+        Be aware of the umask when you set the mode.
+        '''
+
+        if prefix is None:
+            prefix = _tempfile.template
+
+        if dir is None:
+            dir = _tempfile.gettempdir()
+
+        names = _tempfile._get_candidate_names()
+
+        for seq in xrange(_tempfile.TMP_MAX):
+            name = names.next()
+            path = os.path.join(dir, prefix + name + suffix)
+            try:
+                os.mkdir(path, mode)
+                self.path = path
+                return
+            except OSError, e:
+                if e.errno == _errno.EEXIST:
+                    continue # try again
+                raise
+
+        raise IOError, (_errno.EEXIST, "No usable temporary directory name found")
+
+    def __str__(self):
+        return self.path
+
+    def __enter__(self):
+        '''Context Manager entry function'''
+        return self.path
+
+    def rm(self, *args, **kw):
+        try:
+            rmtree(self.path)
+        except:
+            pass
+
+    __exit__ = rm
+    __del__ = rm
+
+
 class Runner():
     '''Context Manager-aware Runner class
     
@@ -269,7 +322,8 @@ class Runner():
         self.language = submission.language
         
         # Create temporary directory
-        self.tempdir = mkdtemp()
+        self.t = TempDir(mode=0770)
+        self.tempdir = self.t.__enter__()
         log.debug('tempdir: %s' % self.tempdir)
         
         # Create temporary source file
@@ -293,42 +347,39 @@ class Runner():
             self.binfile = self.basename
         
         log.debug('srcfile: %s' % self.srcfile)
-        
+
+        os.chdir(self.tempdir)
+
         # Write source code to source file
         with open(os.path.join(self.tempdir, self.srcfile), 'w') as srcfd:
             srcfd.write(submission.source.encode('utf-8'))
-    
+
     def __enter__(self):
         '''Context Manager entry function'''
-        
         return self
-    
+
     def __exit__(self, exception_type, exception_value, traceback):
         '''Context Manager exit function'''
-        
-        if self.tempdir:
-            try:
-                rmtree(self.tempdir)
-            except:
-                pass
-            finally:
-                self.tempdir = None
-    
+        try:
+            self.t.__exit__()
+        except:
+            pass
+        finally:
+            self.t = self.tempdir = None
+
     def __del__(self):
         '''Destructor function
         
         If not already deleted by __exit__ (e.g. if Runner()
         was not used as Context Manager, removes temporary directory
         '''
-        
-        if self.tempdir:
-            try:
-                rmtree(self.tempdir)
-            except:
-                pass
-            finally:
-                self.tempdir = None
-    
+        try:
+            self.t.__exit__()
+        except:
+            pass
+        finally:
+            self.t = self.tempdir = None
+
     def compile(self):
         '''Compile submission source files, if needed
         
